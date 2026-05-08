@@ -1,5 +1,6 @@
 #include "ajouteeleve.h"
 #include "ui_ajouteeleve.h"
+#include <QMessageBox>
 
 AjouteEleve::AjouteEleve(QWidget *parent)
     : QDialog(parent)
@@ -33,10 +34,6 @@ QString AjouteEleve::getNiveau() const
     return ui->niveauCombo->currentText();
 }
 
-void AjouteEleve::on_btnValider_clicked()
-{
-    accept();
-}
 void AjouteEleve::setNom(const QString &n)
 {
     ui->nomEdit->setText(n);
@@ -57,4 +54,18 @@ void AjouteEleve::setNiveau(const QString &n)
     int index = ui->niveauCombo->findText(n);
     if(index >= 0)
         ui->niveauCombo->setCurrentIndex(index);
+}
+
+void AjouteEleve::on_btnValider_clicked()
+{
+    QString nom = ui->nomEdit->text().trimmed();
+    QString prenom = ui->prenomEdit->text().trimmed();
+
+    if(nom.isEmpty() || prenom.isEmpty())
+    {
+        QMessageBox::warning(this, "Erreur", "Veuillez remplir le nom et le prénom !");
+        return;
+    }
+
+    accept();
 }

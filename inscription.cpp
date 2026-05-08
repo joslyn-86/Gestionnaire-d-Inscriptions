@@ -6,6 +6,8 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QMenu>
+#include <QAction>
 
 
 inscription::inscription(QWidget *parent)
@@ -14,14 +16,14 @@ inscription::inscription(QWidget *parent)
 {
     ui->setupUi(this);
     ui->tableWidget->setColumnCount(4);
-    ui->tableWidget->setHorizontalHeaderLabels(
-        {"Nom", "Prenom", "Age", "Niveau"}
-        );
-
+    ui->tableWidget->setHorizontalHeaderLabels({"Nom", "Prenom", "Age", "Niveau"});
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    loadData();
     ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->tableWidget, &QTableWidget::customContextMenuRequested,this, &inscription::showContextMenu);
+    loadData();
+    updateTableDisplay();
 
 }
 
@@ -29,16 +31,13 @@ inscription::~inscription()
 {
     delete ui;
 }
+
 void inscription::loadData()
 {
 
     QFile file("data.csv");
-
-
-
     if(!file.exists())
     {
-        // créer fichier vide avec header
         if(file.open(QIODevice::WriteOnly | QIODevice::Text))
         {
             QTextStream out(&file);
@@ -76,14 +75,13 @@ void inscription::loadData()
                 ui->tableWidget->setItem(row, 3, new QTableWidgetItem(data[3]));
             }
         }
-
         file.close();
     }
 }
+
 void inscription::on_ajouter_clicked()
 {
     AjouteEleve dialog(this);
-
 
     if(dialog.exec() == QDialog::Accepted)
     {
@@ -92,11 +90,6 @@ void inscription::on_ajouter_clicked()
         int age = dialog.getAge();
         QString niveau = dialog.getNiveau();
 
-
-
-
-
-        //Ajouter dans le tableau
         int row = ui->tableWidget->rowCount();
         ui->tableWidget->insertRow(row);
 
@@ -105,7 +98,6 @@ void inscription::on_ajouter_clicked()
         ui->tableWidget->setItem(row, 2, new QTableWidgetItem(QString::number(age)));
         ui->tableWidget->setItem(row, 3, new QTableWidgetItem(niveau));
 
-        // Sauvegarde dans CSV
         QFile file("data.csv");
 
         if(file.open(QIODevice::Append | QIODevice::Text))
@@ -117,35 +109,6 @@ void inscription::on_ajouter_clicked()
     }
 }
 
-void inscription::on_supprimer_clicked()
-{
-    int row = ui->tableWidget->currentRow();
-
-    if(row < 0)
-    {
-        QMessageBox::warning(this, "Erreur", "Sélectionnez un étudiant !");
-        return;
-    }
-
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(
-        this,
-        "Confirmation",
-        "Voulez-vous vraiment supprimer cet étudiant ?",
-        QMessageBox::Yes | QMessageBox::No
-        );
-
-    if(reply == QMessageBox::No)
-    {
-        return;
-    }
-
-
-    ui->tableWidget->removeRow(row);
-
-    saveAllToCSV();
-}
-
 
 void inscription::saveAllToCSV()
 {
@@ -155,7 +118,6 @@ void inscription::saveAllToCSV()
     {
         QTextStream out(&file);
 
-        // header
         out << "Nom,Prenom,Age,Niveau\n";
 
         for(int i = 0; i < ui->tableWidget->rowCount(); i++)
@@ -172,17 +134,55 @@ void inscription::saveAllToCSV()
     }
 }
 
-void inscription::on_modifier_clicked()
+void inscription::showContextMenu(const QPoint &pos)
 {
-    int row = ui->tableWidget->currentRow();
+    QModelIndex index = ui->tableWidget->indexAt(pos);
 
-    if(row < 0)
-    {
-        QMessageBox::warning(this, "Erreur", "Sélectionnez un étudiant !");
+    if(!index.isValid())
         return;
-    }
 
-    //  récupérer données actuelles
+    int row = index.row();
+    ui->tableWidget->selectRow(row);
+
+    QMenu menu(this);
+
+    QAction *modifierAction = menu.addAction("Modifier");
+    QAction *supprimerAction = menu.addAction("Supprimer");
+
+    QAction *selectedAction = menu.exec(ui->tableWidget->viewport()->mapToGlobal(pos));
+
+    if(selectedAction == modifierAction)
+    {
+        modifierLigne(row);
+    }
+    else if(selectedAction == supprimerAction)
+    {
+        supprimerLigne(row);
+    }
+}
+
+void inscription::supprimerLigne(int row)
+{
+    if(row < 0) return;
+
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this,
+        "Confirmation",
+        "Voulez-vous vraiment supprimer cet étudiant ?",
+        QMessageBox::Yes | QMessageBox::No
+        );
+
+    if(reply == QMessageBox::No)
+        return;
+
+    ui->tableWidget->removeRow(row);
+    saveAllToCSV();
+}
+
+void inscription::modifierLigne(int row)
+{
+    if(row < 0) return;
+
     QString nom = ui->tableWidget->item(row,0)->text();
     QString prenom = ui->tableWidget->item(row,1)->text();
     int age = ui->tableWidget->item(row,2)->text().toInt();
@@ -197,19 +197,11 @@ void inscription::on_modifier_clicked()
 
     if(dialog.exec() == QDialog::Accepted)
     {
-        // récupérer nouvelles valeurs
-        QString newNom = dialog.getNom();
-        QString newPrenom = dialog.getPrenom();
-        int newAge = dialog.getAge();
-        QString newNiveau = dialog.getNiveau();
-
-        // mettre à jour tableau
-        ui->tableWidget->setItem(row,0,new QTableWidgetItem(newNom));
-        ui->tableWidget->setItem(row,1,new QTableWidgetItem(newPrenom));
-        ui->tableWidget->setItem(row,2,new QTableWidgetItem(QString::number(newAge)));
-        ui->tableWidget->setItem(row,3,new QTableWidgetItem(newNiveau));
-
-        // sauvegarder CSV
+        ui->tableWidget->setItem(row,0,new QTableWidgetItem(dialog.getNom()));
+        ui->tableWidget->setItem(row,1,new QTableWidgetItem(dialog.getPrenom()));
+        ui->tableWidget->setItem(row,2,new QTableWidgetItem(QString::number(dialog.getAge())));
+        ui->tableWidget->setItem(row,3,new QTableWidgetItem(dialog.getNiveau()));
+        QMessageBox::information(this,"OK","Modifié !");
         saveAllToCSV();
     }
 }
@@ -244,4 +236,44 @@ void inscription::on_searchEdit_textChanged(const QString &arg1)
     }
 }
 
+void inscription::on_nextBtn_clicked()
+{
+        currentPage++;
+        updateTableDisplay();
+}
 
+void inscription::on_prevBtn_clicked()
+{
+        currentPage--;
+        updateTableDisplay();
+}
+
+void inscription::updateTableDisplay()
+{
+    int totalRows = ui->tableWidget->rowCount();
+
+    if(totalRows == 0)
+    {
+        ui->prevBtn->setEnabled(false);
+        ui->nextBtn->setEnabled(false);
+        return;
+    }
+
+    int maxPage = (totalRows - 1) / rowsPerPage;
+
+    for(int i = 0; i < totalRows; i++)
+    {
+        int start = currentPage * rowsPerPage;
+        int end = start + rowsPerPage;
+
+        bool visible = (i >= start && i < end);
+        ui->tableWidget->setRowHidden(i, !visible);
+    }
+
+    ui->prevBtn->setEnabled(currentPage > 0);
+    ui->nextBtn->setEnabled(currentPage < maxPage);
+    ui->pageLabel->setText(
+        "Page " + QString::number(currentPage + 1) +
+        " / " + QString::number(maxPage + 1)
+        );
+}

@@ -20,14 +20,19 @@ public:
 private slots:
     void on_ajouter_clicked();
     void loadData();
-    void on_supprimer_clicked();
-    void on_modifier_clicked();
     void on_searchEdit_textChanged(const QString &arg1);
+    void on_prevBtn_clicked();
+    void on_nextBtn_clicked();
+    void updateTableDisplay();
+    void showContextMenu(const QPoint &pos);
 
 private:
-    void saveAllToCSV();
 
-private:
     Ui::inscription *ui;
+    void saveAllToCSV();
+    void supprimerLigne(int row);
+    void modifierLigne(int row);
+    int currentPage = 0;
+    int rowsPerPage = 19;
 };
 #endif

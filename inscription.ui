@@ -235,32 +235,9 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="supprimer">
+       <widget class="QLabel" name="pageLabel">
         <property name="text">
-         <string>Supprimer</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer_3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Fixed</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="modifier">
-        <property name="text">
-         <string>Modifier</string>
+         <string>page 1/1</string>
         </property>
        </widget>
       </item>
